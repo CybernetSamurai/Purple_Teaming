@@ -51,9 +51,10 @@ kill_net () {
 
 new_cluster () {
 	local BASE_NAME=$1
+	local COUNT=$2
 	new_bridge
 
-	for i in {1..5}; do
+	for i in $(seq 1 $COUNT); do
 		local NAME=${BASE_NAME}${i}
 		local NETNS=ci690-${NAME}
 		local VLAN=$((100 + i))
@@ -74,13 +75,7 @@ new_cluster () {
 	done
 }
 
-touch_server () {
-	local NAME=$1
-	local SERV_IP=$2
-	local NETNS=ci690-${NAME}
-	sudo ip netns exec ${NETNS} bash -c "for i in {1..5}; do curl ${SERV_IP} > /dev/null 2>&1; sleep 2; done"
-}
-
+# generate random ip addresses for namespaces
 random_ip () {
 	local MIN=1
 	local MAX=254
@@ -97,14 +92,10 @@ random_ip () {
 
 new_mikrotik_config () {
 	local FILE=mikrotik.rsc
-	local IFACE_RIP=ether1
-	local IFACE_LAN=ether2
+	local IFACE=ether2
 
 	[ -f "${FILE}" ] && rm ${FILE}
 	touch ${FILE}
-
-	echo "/routing/rip/instance add name=black redistribute=connected,rip" >> $FILE
-	echo "/routing/rip/interface-template add interface=$IFACE_RIP instance=black" >> $FILE
 
 	for NETNS in $(sudo ip netns list | grep "ci690-" | awk '{print $1}'); do
 		[ -n "${NETNS}" ] || continue
@@ -113,10 +104,57 @@ new_mikrotik_config () {
 		local GW=$(sudo ip netns exec ${NETNS} ip -br route | grep "default" | awk '{print $3}')
 		local VLAN=$(sudo ip netns exec ${NETNS} ip -d link show | grep vlan | awk '{print $5}')
 
-		echo "/interface/vlan add name=vlan$VLAN vlan-id=$VLAN interface=$IFACE_LAN" >> $FILE
+		echo "/interface/vlan add name=vlan$VLAN vlan-id=$VLAN interface=$IFACE" >> $FILE
 		echo "/ip/address add address=$GW/24 interface=vlan$VLAN" >> $FILE
 	done
 
 	# start server for router to download config
 	python3 -m http.server
+}
+
+# simulate 'legitimate' web traffic to target server
+traffic_gen () {
+	local WEB=$1
+	mapfile -t NETNS < <(ip netns list | awk '{print $1}')
+	#local NETNS=(ci690-1 ci690-2 ci690-3 ci690-4 ci690-5)
+	local PATHS=(
+		"/" 
+	  	"/index.php" 
+	  	"/index.html" 
+	  	"/login" 
+	  	"/about" 
+	  	"/favicon.ico" 
+	  	"/api/status"
+  	)
+	local USER_AGENTS=(
+		"Mozilla/5.0"
+	  	"curl/8.5.0"
+	  	"Wget/1.21.4"
+	  	"Mozilla/5.0 (X11; Linux x86_64)"
+	)
+
+	while true; do
+		# random sleep interval
+		sleep_time=0.$(( RANDOM % 1000 ))
+		sleep $sleep_time
+
+		# Pick random namespace
+		ns="${NETNS[$(( RANDOM % ${#NETNS[@]} ))]}"
+
+		# Pick random path
+		path="${PATHS[$(( RANDOM % ${#PATHS[@]} ))]}"
+
+		# Pick random user agent
+		ua="${USER_AGENTS[$(( RANDOM % ${#USER_AGENTS[@]} ))]}"
+
+		echo "[*] $(date '+%F %T') namespace=$ns GET http://$WEB$path"
+
+		sudo ip netns exec "$ns" \
+			curl -A "$ua" \
+			     --max-time 5 \
+			     --silent \
+			     --output /dev/null \
+			     "http://$WEB$path"
+
+	done
 }
