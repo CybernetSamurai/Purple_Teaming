@@ -97,6 +97,10 @@ new_mikrotik_config () {
 	[ -f "${FILE}" ] && rm ${FILE}
 	touch ${FILE}
 
+	# remove existing vlan interfaces
+	echo "/ip/address remove [ find where interface~\"vlan\" ]" >> $FILE
+	echo "/interface/vlan remove [ find running ]" >> $FILE
+
 	for NETNS in $(sudo ip netns list | grep "ci690-" | awk '{print $1}'); do
 		[ -n "${NETNS}" ] || continue
 		local NAME=${NETNS#ci690-}
