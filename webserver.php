@@ -13,18 +13,35 @@ if (isset($_GET['lang'])) {
   <head>
     <meta charset="UTF-8">
     <title>corpnetblog</title>
+    <style>
+      .title {
+        background-color: black;
+        padding: 10px;
+        width: 100%;
+      }
+      .title h1 {
+        color: cyan;
+        margin: 0;
+      }
+      .chooselang {
+        padding: 10px;
+      }
+    </style>
   </head>
   <body>
-    <h1>CORP NET BLOG</h1>
-
-    <form method="GET" action="">
-      <label for="lang">Choose language:</label>
-      <select name="lang" id="lang" onchange="this.form.submit()">
-        <option value="en">English</option>
-        <option value="es">Spanish</option>
-        <option value="fr">French</option>
-      </select>
-    </form>
+    <div class="title">
+      <h1>CORP NET BLOG</h1>
+    </div>
+    <div class="chooselang">
+      <form method="GET" action="">
+        <label for="lang">Choose language:</label>
+        <select name="lang" id="lang" onchange="this.form.submit()">
+          <option value="en" <?php if ($lang == 'en') echo 'selected'; ?>>English</option>
+          <option value="es" <?php if ($lang == 'es') echo 'selected'; ?>>Spanish</option>
+          <option value="fr" <?php if ($lang == 'fr') echo 'selected'; ?>>French</option>
+        </select>
+      </form>
+    </div>
     <hr>
     <div>
       <?php
