@@ -12,7 +12,7 @@ if (isset($_GET['lang'])) {
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>corpnetblog</title>
+    <title>blueteamblog</title>
     <style>
       .title {
         background-color: black;
@@ -30,7 +30,7 @@ if (isset($_GET['lang'])) {
   </head>
   <body>
     <div class="title">
-      <h1>CORP NET BLOG</h1>
+      <h1>BLUE TEAM BLOG</h1>
     </div>
     <div class="chooselang">
       <form method="GET" action="">
